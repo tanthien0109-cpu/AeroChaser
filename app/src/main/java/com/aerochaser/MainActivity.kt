@@ -22,9 +22,9 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(text = "Welcome to AeroChaser", style = MaterialTheme.typography.headlineMedium)
-                    }
+                        // We would inject the viewmodel via Koin here, using stub for scaffolding
+                        // val viewModel: TimelineViewModel by koinViewModel()
+                        Text(text = "AeroChaser Timeline Screen Wrapper", style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }

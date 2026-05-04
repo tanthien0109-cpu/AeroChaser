@@ -75,4 +75,7 @@ dependencies {
 
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+    
+    // Coil for image loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
 }
