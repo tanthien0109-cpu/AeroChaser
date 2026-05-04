@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import com.aerochaser.domain.exif.ExifParser
 import com.aerochaser.domain.models.PhotoMetadata
+import com.aerochaser.domain.usecase.HardwareClassifier
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -39,6 +40,8 @@ class AndroidExifParser(private val context: Context) : ExifParser {
                 val lat = latLong?.get(0)
                 val lng = latLong?.get(1)
 
+                val hardwareSystemType = HardwareClassifier.classify(cameraModel, lensModel)
+
                 PhotoMetadata(
                     id = photoId,
                     localUri = uriString,
@@ -50,7 +53,8 @@ class AndroidExifParser(private val context: Context) : ExifParser {
                     iso = iso,
                     focalLength = focalLength,
                     gpsLat = lat,
-                    gpsLng = lng
+                    gpsLng = lng,
+                    systemType = hardwareSystemType
                 )
             }
         } catch (e: Exception) {

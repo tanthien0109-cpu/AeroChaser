@@ -6,6 +6,7 @@ import com.aerochaser.data.local.entity.PhotoEntity
 import com.aerochaser.data.local.entity.PhotoWithExif
 import com.aerochaser.domain.models.PhotoMetadata
 import com.aerochaser.domain.repository.PhotoRepository
+import com.aerochaser.domain.usecase.HardwareClassifier
 
 class PhotoRepositoryImpl(
     private val photoDao: PhotoDao
@@ -52,7 +53,8 @@ class PhotoRepositoryImpl(
             iso = exifData?.iso,
             focalLength = exifData?.focalLength,
             gpsLat = exifData?.gpsLat,
-            gpsLng = exifData?.gpsLng
+            gpsLng = exifData?.gpsLng,
+            systemType = HardwareClassifier.classify(exifData?.cameraModel, exifData?.lensModel)
         )
     }
 }
