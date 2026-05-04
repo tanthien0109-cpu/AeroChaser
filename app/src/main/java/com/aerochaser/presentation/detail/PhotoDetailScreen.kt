@@ -81,6 +81,14 @@ fun PhotoDetailScreen(photo: PhotoMetadata, onBack: () -> Unit) {
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+
+                // AI Tagging Stub
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "🤖 ML Kit AI Tagging (Aircraft & Airline) coming in v1.1",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
             }
         }
     }
