@@ -11,15 +11,16 @@ import com.aerochaser.data.local.entity.PhotoWithExif
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface PhotoDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertPhoto(photo: PhotoEntity)
+abstract class PhotoDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertExifData(exifData: ExifDataEntity)
+    abstract suspend fun insertPhoto(photo: PhotoEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertExifData(exifData: ExifDataEntity)
 
     @Transaction
-    suspend fun insertPhotoWithExif(photo: PhotoEntity, exifData: ExifDataEntity?) {
+    open suspend fun insertPhotoWithExif(photo: PhotoEntity, exifData: ExifDataEntity?) {
         insertPhoto(photo)
         if (exifData != null) {
             insertExifData(exifData)
@@ -28,9 +29,13 @@ interface PhotoDao {
 
     @Transaction
     @Query("SELECT * FROM photos ORDER BY captureDateMs DESC")
-    fun getAllPhotos(): Flow<List<PhotoWithExif>>
-    
+    abstract fun getAllPhotos(): Flow<List<PhotoWithExif>>
+
     @Transaction
     @Query("SELECT * FROM photos ORDER BY captureDateMs DESC")
-    suspend fun getAllPhotosSync(): List<PhotoWithExif>
+    abstract suspend fun getAllPhotosSync(): List<PhotoWithExif>
+
+    @Transaction
+    @Query("SELECT * FROM photos WHERE id = :id LIMIT 1")
+    abstract suspend fun getPhotoById(id: String): PhotoWithExif?
 }

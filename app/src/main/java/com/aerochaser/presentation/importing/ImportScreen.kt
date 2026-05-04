@@ -25,16 +25,15 @@ fun ImportScreen() {
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
         uri?.let {
-            // Trigger WorkManager
             val workManager = WorkManager.getInstance(context)
             val inputData = Data.Builder()
-                .putString("DIRECTORY_URI", it.toString())
+                .putString(ImportWorker.KEY_DIRECTORY_URI, it.toString())
                 .build()
-                
+
             val importRequest = OneTimeWorkRequestBuilder<ImportWorker>()
                 .setInputData(inputData)
                 .build()
-                
+
             workManager.enqueue(importRequest)
         }
     }

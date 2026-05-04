@@ -1,6 +1,12 @@
 package com.aerochaser.presentation.timeline
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -18,7 +24,10 @@ import coil.compose.AsyncImage
 import com.aerochaser.domain.models.PhotoMetadata
 
 @Composable
-fun TimelineScreen(viewModel: TimelineViewModel) {
+fun TimelineScreen(
+    viewModel: TimelineViewModel,
+    onPhotoClick: (photoId: String) -> Unit
+) {
     val uiState by viewModel.uiState.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -36,7 +45,7 @@ fun TimelineScreen(viewModel: TimelineViewModel) {
             is TimelineUiState.Success -> {
                 if (state.photos.isEmpty()) {
                     Text(
-                        text = "No photos imported yet. Let's add some planes!",
+                        text = "No photos imported yet.\nTap Import to add some planes!",
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -47,7 +56,10 @@ fun TimelineScreen(viewModel: TimelineViewModel) {
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(state.photos, key = { it.id }) { photo ->
-                            PhotoItem(photo = photo)
+                            PhotoItem(
+                                photo = photo,
+                                onClick = { onPhotoClick(photo.id) }
+                            )
                         }
                     }
                 }
@@ -57,14 +69,15 @@ fun TimelineScreen(viewModel: TimelineViewModel) {
 }
 
 @Composable
-fun PhotoItem(photo: PhotoMetadata) {
+private fun PhotoItem(photo: PhotoMetadata, onClick: () -> Unit) {
     AsyncImage(
         model = photo.localUri,
-        contentDescription = "Plane Photo ${photo.cameraModel}",
+        contentDescription = "Aviation photo taken with ${photo.cameraModel ?: "camera"}",
         contentScale = ContentScale.Crop,
         modifier = Modifier
             .padding(2.dp)
             .aspectRatio(1f)
             .fillMaxWidth()
+            .clickable(onClick = onClick)
     )
 }

@@ -1,20 +1,58 @@
 package com.aerochaser.data.repository
 
+import com.aerochaser.data.local.dao.PhotoDao
+import com.aerochaser.data.local.entity.ExifDataEntity
+import com.aerochaser.data.local.entity.PhotoEntity
+import com.aerochaser.data.local.entity.PhotoWithExif
 import com.aerochaser.domain.models.PhotoMetadata
 import com.aerochaser.domain.repository.PhotoRepository
 
-class PhotoRepositoryImpl : PhotoRepository {
+class PhotoRepositoryImpl(
+    private val photoDao: PhotoDao
+) : PhotoRepository {
+
     override suspend fun getLocalPhotos(): List<PhotoMetadata> {
-        // TODO: Implement with Room database in Phase 2
-        return emptyList()
+        return photoDao.getAllPhotosSync().map { it.toDomain() }
+    }
+
+    override suspend fun getPhotoById(id: String): PhotoMetadata? {
+        return photoDao.getPhotoById(id)?.toDomain()
     }
 
     override suspend fun savePhotoMetadata(metadata: PhotoMetadata) {
-        // TODO: Implement database insertion
+        val photoEntity = PhotoEntity(
+            id = metadata.id,
+            localUri = metadata.localUri,
+            captureDateMs = metadata.captureDateMs,
+            importedAtMs = System.currentTimeMillis()
+        )
+        val exifEntity = ExifDataEntity(
+            photoId = metadata.id,
+            cameraModel = metadata.cameraModel,
+            lensModel = metadata.lensModel,
+            aperture = metadata.aperture,
+            shutterSpeed = metadata.shutterSpeed,
+            iso = metadata.iso,
+            focalLength = metadata.focalLength,
+            gpsLat = metadata.gpsLat,
+            gpsLng = metadata.gpsLng
+        )
+        photoDao.insertPhotoWithExif(photoEntity, exifEntity)
     }
 
-    override suspend fun scanLocalDirectoryForPhotos(directoryUri: String): Int {
-        // TODO: Implement directory scanning and EXIF parsing
-        return 0
+    private fun PhotoWithExif.toDomain(): PhotoMetadata {
+        return PhotoMetadata(
+            id = photo.id,
+            localUri = photo.localUri,
+            captureDateMs = photo.captureDateMs,
+            cameraModel = exifData?.cameraModel,
+            lensModel = exifData?.lensModel,
+            aperture = exifData?.aperture,
+            shutterSpeed = exifData?.shutterSpeed,
+            iso = exifData?.iso,
+            focalLength = exifData?.focalLength,
+            gpsLat = exifData?.gpsLat,
+            gpsLng = exifData?.gpsLng
+        )
     }
 }
