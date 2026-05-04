@@ -7,6 +7,7 @@ import com.aerochaser.data.local.io.AndroidFileIO
 import com.aerochaser.data.repository.PhotoRepositoryImpl
 import com.aerochaser.domain.exif.ExifParser
 import com.aerochaser.domain.io.FileIO
+import com.aerochaser.domain.repository.GearInsightRepository
 import com.aerochaser.domain.repository.PhotoRepository
 import com.aerochaser.domain.usecase.GetPhotosUseCase
 import com.aerochaser.domain.usecase.ScanDirectoryUseCase
@@ -40,7 +41,9 @@ val appModule = module {
     factory { GetPhotosUseCase(get()) }
     factory { ScanDirectoryUseCase(get(), get(), get()) }
 
+    single<GearInsightRepository> { com.aerochaser.data.repository.GearInsightRepositoryStub() }
+
     // ViewModels
     viewModel { TimelineViewModel(get()) }
-    viewModel { PhotoDetailViewModel(get()) }
+    viewModel { PhotoDetailViewModel(get(), get()) }
 }
