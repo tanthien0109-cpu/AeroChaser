@@ -1,5 +1,8 @@
 package com.aerochaser.di
 
+import android.location.Geocoder
+import com.google.firebase.analytics.FirebaseAnalytics
+import java.util.Locale
 import androidx.room.Room
 import com.aerochaser.data.local.AppDatabase
 import com.aerochaser.data.local.exif.AndroidExifParser
@@ -28,6 +31,10 @@ val appModule = module {
     }
     single { get<AppDatabase>().photoDao() }
 
+    // Google Services
+    single { FirebaseAnalytics.getInstance(androidContext()) }
+    single { Geocoder(androidContext(), Locale.getDefault()) }
+
     // Platform-specific implementations
     // PLATFORM-SPECIFIC: Android FileIO via SAF
     single<FileIO> { AndroidFileIO(androidContext()) }
@@ -45,5 +52,5 @@ val appModule = module {
 
     // ViewModels
     viewModel { TimelineViewModel(get()) }
-    viewModel { PhotoDetailViewModel(get(), get()) }
+    viewModel { PhotoDetailViewModel(get(), get(), get()) }
 }

@@ -43,6 +43,7 @@ fun PhotoDetailScreen(
     photo: PhotoMetadata,
     gearProfile: GearProfile?,
     isGearLoading: Boolean,
+    locationName: String?,
     onBack: () -> Unit
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
@@ -102,11 +103,36 @@ fun PhotoDetailScreen(
                 // GPS & Future hooks
                 if (photo.gpsLat != null && photo.gpsLng != null) {
                     Spacer(modifier = Modifier.height(12.dp))
+                    
+                    val locationText = if (locationName != null) {
+                        "📍 $locationName (${String.format("%.4f", photo.gpsLat)}, ${String.format("%.4f", photo.gpsLng)})"
+                    } else {
+                        "📍 ${String.format("%.4f", photo.gpsLat)}, ${String.format("%.4f", photo.gpsLng)}"
+                    }
+                    
                     Text(
-                        text = "📍 ${String.format("%.4f", photo.gpsLat)}, ${String.format("%.4f", photo.gpsLng)}",
+                        text = locationText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(150.dp)) {
+                        com.google.maps.android.compose.GoogleMap(
+                            modifier = Modifier.fillMaxSize(),
+                            cameraPositionState = com.google.maps.android.compose.CameraPositionState(
+                                position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(
+                                    com.google.android.gms.maps.model.LatLng(photo.gpsLat, photo.gpsLng),
+                                    12f
+                                )
+                            ),
+                            uiSettings = com.google.maps.android.compose.MapUiSettings(zoomControlsEnabled = false, mapToolbarEnabled = false)
+                        ) {
+                            com.google.maps.android.compose.Marker(
+                                state = com.google.maps.android.compose.MarkerState(position = com.google.android.gms.maps.model.LatLng(photo.gpsLat, photo.gpsLng))
+                            )
+                        }
+                    }
                 }
             }
         }

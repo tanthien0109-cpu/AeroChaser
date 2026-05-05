@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "862004250970",
+    "project_id": "aerochaser",
+    "storage_bucket": "aerochaser.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862004250970:android:0be1530d7c2e39fa6d0b63",
+        "android_client_info": {
+          "package_name": "com.aerochaser"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbVRUKQV1p_K5yxf-7aiJxZHC1aW_tyXk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

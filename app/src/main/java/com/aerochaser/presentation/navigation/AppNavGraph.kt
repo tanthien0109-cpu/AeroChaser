@@ -107,12 +107,14 @@ fun AppNavGraph() {
                     val photo by viewModel.photo.collectAsState()
                     val gearProfile by viewModel.gearProfile.collectAsState()
                     val isGearLoading by viewModel.isGearLoading.collectAsState()
+                    val locationName by viewModel.locationName.collectAsState()
                     
                     if (photo != null) {
                         PhotoDetailScreen(
                             photo = photo!!,
                             gearProfile = gearProfile,
                             isGearLoading = isGearLoading,
+                            locationName = locationName,
                             onBack = { navController.popBackStack() }
                         )
                     } else {
