@@ -123,7 +123,8 @@ private fun SignedOutView(viewModel: CloudImportViewModel) {
                 try {
                     val credentialManager = CredentialManager.create(context)
                     val request = viewModel.buildSignInRequest(BuildConfig.OAUTH_CLIENT_ID)
-                    val result = credentialManager.getCredential(context as android.app.Activity, request)
+                    val activity = context.findActivity() ?: throw IllegalStateException("Activity not found")
+                    val result = credentialManager.getCredential(activity, request)
                     val credential = result.credential
 
                     if (credential is CustomCredential &&
@@ -350,4 +351,13 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
             TextButton(onClick = onRetry) { Text("Retry") }
         }
     }
+}
+
+private fun android.content.Context.findActivity(): android.app.Activity? {
+    var context = this
+    while (context is android.content.ContextWrapper) {
+        if (context is android.app.Activity) return context
+        context = context.baseContext
+    }
+    return null
 }
