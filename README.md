@@ -1,51 +1,167 @@
 # AeroChaser ✈️
 
-A clean, fast Android app for aviation enthusiasts to organize and view plane photos using EXIF data.
+**The Cloud-Connected Aviation Photo Hub for Android**
 
-## What's Working (v1.0.0)
+AeroChaser turns your plane-spotting photos into a rich, location-aware, AI-enhanced collection. Import from local storage or Google Drive, view every shot on an interactive map, and let Gemini AI tell you about the gear that captured it — all from a single, beautifully crafted Compose interface.
 
-We just hit our 1.0 release candidate! Here's what's packed inside:
+---
 
-*   **Smart Timeline:** The app reads your photos' EXIF metadata (capture date, camera, lens) and automatically builds a chronological timeline.
-*   **Local Imports:** Grab whole folders of photos straight from your phone's storage. It runs smoothly in the background so you can keep using the app.
-*   **Immersive Viewer:** Tap a photo to go full screen. You can pinch to zoom (up to 5x) to check the details, and tap to toggle a sleek overlay showing the camera specs.
-*   **Modern Android UI:** Built completely with Jetpack Compose. It features a bottom navigation bar and fully supports Material 3 dynamic colors (so it matches your system theme on Android 12+).
+## Features
 
-## What's Next
+### 📸 Smart Timeline
+Automatically reads EXIF metadata (capture date, camera body, lens, GPS coordinates) and builds a reverse-chronological timeline of every sighting.
 
-*   **Cloud Sync:** Hooking up Google Drive and Google Photos so you aren't limited to local storage. (The UI is stubbed out, just waiting on the API integration).
-*   **Map View:** We're going to plot your shots on a map using the GPS coordinates saved in the EXIF data.
-*   **AI Spotting:** Integrating ML Kit to automatically recognize aircraft types and airlines from your photos.
+### 🗺️ Interactive Map Viewer
+Each photo's GPS coordinates are plotted on a Google Map with reverse-geocoded city names — so you always know _where_ that 747 was parked.
 
-## The Technical Stuff
+### ☁️ Google Drive Import
+Sign in with your Google account via Credential Manager and browse your Drive folders to import aviation photos directly into the app. Background downloads are powered by WorkManager for resilience across app restarts and network interruptions.
 
-Under the hood, AeroChaser is built using Clean Architecture with a focus on making it easy to port later.
+### 🤖 AI Gear Overview (Gemini)
+Expand the AI panel on any photo to get an on-demand summary of the camera and lens combination used. Powered by the Gemini generative AI SDK, with results cached locally in Room for instant recall.
 
-*   **UI:** Jetpack Compose, Material 3, Navigation Compose
-*   **DI:** Koin
-*   **Database:** Room (SQLite)
-*   **Images:** Coil
-*   **Background Tasks:** WorkManager
+### 🔍 Immersive Detail Viewer
+Full-screen photo viewer with pinch-to-zoom (up to 5×), swipeable HorizontalPager navigation, and a tap-toggle EXIF overlay showing camera specs at a glance.
 
-**Note for Porters:** If you're looking to bring this to iOS or Windows, check out the `Domain Layer`. We've set up clear interfaces (like `FileIO` and `ExifParser`). All the Android-specific stuff is kept in the Data layer and clearly tagged with `// PLATFORM-SPECIFIC:`.
+### 🎨 Material 3 Dynamic Theming
+Fully supports Material You dynamic colors on Android 12+, with a polished dark/light mode experience.
 
-## How to Build It
+---
 
-Want to poke around the code or run it yourself?
+## Architecture
 
-1.  **Clone it:** `git clone https://github.com/tanthien0109-cpu/AeroChaser.git`
-2.  **Open in Android Studio:** You'll need Hedgehog (2023.1.1) or newer.
-3.  **The Gradle Wrapper Thing:** You might notice `gradlew` and the wrapper jar aren't in the repo. That's intentional! To keep the repo clean of binaries, we let Android Studio handle it. When you first open the project, Android Studio will prompt you to generate the wrapper. Just hit **OK**.
-4.  **Sync & Run:** Let Gradle do its thing, then hit run. It works on any device or emulator running Android 8.0 (API 26) or higher.
+AeroChaser follows **Clean Architecture** with a strict separation of concerns:
+
+```
+com.aerochaser/
+├── domain/           ← Pure Kotlin — zero Android imports
+│   ├── models/       ← PhotoMetadata, GearProfile, etc.
+│   ├── repository/   ← Repository interfaces (PhotoRepository, AiSummaryRepository)
+│   ├── usecase/      ← ScanDirectoryUseCase, GetPhotosUseCase, HardwareClassifier
+│   ├── exif/         ← ExifParser interface
+│   ├── io/           ← FileIO interface
+│   └── cloud/        ← CloudPhotoSource interface
+│
+├── data/             ← Android-specific implementations
+│   ├── local/        ← Room DB, DAOs, EXIF parsing, WorkManager workers
+│   ├── cloud/        ← GoogleDrivePhotoSource (Drive REST v3)
+│   ├── ai/           ← GeminiAiSummaryRepository
+│   └── repository/   ← Repository implementations
+│
+├── presentation/     ← Jetpack Compose UI
+│   ├── timeline/     ← Main photo grid + timeline
+│   ├── detail/       ← Full-screen viewer, map, AI panel
+│   ├── cloud/        ← Drive import screen + Google Sign-In
+│   ├── importing/    ← Local folder import flow
+│   └── navigation/   ← NavHost + bottom nav
+│
+├── di/               ← Koin dependency injection modules
+└── ui/               ← Theme, colors, typography
+```
+
+> **Porters:** The `domain/` layer has zero Android dependencies. All platform contracts (`FileIO`, `ExifParser`, `CloudPhotoSource`) are defined as interfaces — swap the `data/` implementations to target iOS, Desktop, or any other Kotlin target.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **UI** | Jetpack Compose · Material 3 · Navigation Compose · Coil |
+| **DI** | Koin |
+| **Database** | Room (SQLite) |
+| **Background** | WorkManager |
+| **Cloud** | Google Drive REST API v3 · Credential Manager |
+| **AI** | Google Gemini Generative AI SDK |
+| **Maps** | Google Maps SDK · Maps Compose |
+| **Auth** | Google Identity Services · Play Services Auth |
+| **Observability** | Firebase Analytics · Crashlytics · Performance Monitoring |
+| **Config** | Firebase Remote Config · App Check (Play Integrity) |
+| **Build** | Kotlin 1.9 · KSP · Gradle (Kotlin DSL) |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Android Studio** Hedgehog (2023.1.1) or newer
+- **JDK 17**
+- A physical device or emulator running **Android 8.0+ (API 26)**
+
+### 1. Clone
+
+```bash
+git clone https://github.com/tanthien0109-cpu/AeroChaser.git
+cd AeroChaser
+```
+
+### 2. Configure API Keys
+
+Create or edit `local.properties` in the project root:
+
+```properties
+# Google Maps — restricted to Maps SDK + Android app
+MAPS_API_KEY=your_maps_api_key
+
+# Google OAuth — Web Client ID from GCP Console (Credentials tab)
+OAUTH_CLIENT_ID="your_web_client_id"
+
+# Gemini AI — API key from Google AI Studio
+GEMINI_API_KEY="your_gemini_api_key"
+```
+
+> **Security:** `local.properties` is git-ignored and **never** committed. All keys must be restricted by application (package name + SHA-1) and API scope in the GCP Console.
+
+### 3. Firebase Setup
+
+The project includes a committed `google-services.json` for the `com.aerochaser` package. If you're building under a different package name, replace it with your own from the [Firebase Console](https://console.firebase.google.com/).
+
+### 4. Build & Run
+
+```bash
+./gradlew assembleDebug
+```
+
+Or simply open the project in Android Studio and hit **Run**.
+
+> **Note about Gradle Wrapper:** If `gradlew` isn't present, Android Studio will prompt you to generate it on first open. Accept the prompt.
+
+---
 
 ## Running Tests
 
-We've got unit tests set up for the core logic (no Android device needed). You can run them from Android Studio or the command line:
-
 ```bash
+# Unit tests (no device required)
 ./gradlew test
+
+# Instrumented tests (requires connected device / emulator)
+./gradlew connectedAndroidTest
 ```
+
+---
+
+## Project Configuration
+
+| File | Purpose |
+|---|---|
+| `local.properties` | API keys (git-ignored) |
+| `app/google-services.json` | Firebase configuration |
+| `app/build.gradle.kts` | Dependencies, SDK versions, build config |
+| `gradle.properties` | JVM args, AndroidX opt-in flags |
+| `settings.gradle.kts` | Plugin repositories, project name |
+
+---
+
+## Security Policy
+
+- **Zero secrets in source control.** All API keys live in `local.properties` (git-ignored).
+- **Key restriction.** Every GCP key is restricted by Android app (package + SHA-1) and API scope.
+- **App Check.** Firebase App Check with Play Integrity is configured for backend resource protection.
+- **Privacy.** No PII is logged or sent to Analytics. GPS coordinates are accessed only with explicit user permission.
+
+---
 
 ## License
 
-Copyright 2026. All rights reserved.
+Copyright © 2026 AeroChaser. All rights reserved.
