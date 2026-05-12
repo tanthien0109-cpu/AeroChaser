@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -25,13 +28,15 @@ android {
         }
 
         // Read API Keys from local.properties
-        val properties = java.util.Properties()
+        val properties = Properties()
         val localPropertiesFile = rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
-            properties.load(java.io.FileInputStream(localPropertiesFile))
+            properties.load(FileInputStream(localPropertiesFile))
         }
         val oauthClientId = properties.getProperty("OAUTH_CLIENT_ID", "\"YOUR_WEB_CLIENT_ID_HERE\"")
         buildConfigField("String", "OAUTH_CLIENT_ID", oauthClientId)
+        val geminiApiKey = properties.getProperty("GEMINI_API_KEY", "\"\"")
+        buildConfigField("String", "GEMINI_API_KEY", geminiApiKey)
     }
 
     buildTypes {
@@ -132,4 +137,7 @@ dependencies {
 
     // Maps Compose
     implementation("com.google.maps.android:maps-compose:4.3.0")
+
+    // Gemini AI (Cloud fallback for gear summaries)
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 }

@@ -11,4 +11,5 @@ interface PhotoRepository {
     suspend fun getLocalPhotos(): List<PhotoMetadata>
     suspend fun getPhotoById(id: String): PhotoMetadata?
     suspend fun savePhotoMetadata(metadata: PhotoMetadata)
+    suspend fun photoExistsByUri(uri: String): Boolean
 }

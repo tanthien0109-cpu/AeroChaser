@@ -1,6 +1,8 @@
 package com.aerochaser.di
 
 import android.location.Geocoder
+import com.aerochaser.BuildConfig
+import com.aerochaser.data.ai.GeminiAiSummaryRepository
 import com.google.firebase.analytics.FirebaseAnalytics
 import java.util.Locale
 import androidx.room.Room
@@ -10,6 +12,7 @@ import com.aerochaser.data.local.io.AndroidFileIO
 import com.aerochaser.data.repository.PhotoRepositoryImpl
 import com.aerochaser.domain.exif.ExifParser
 import com.aerochaser.domain.io.FileIO
+import com.aerochaser.domain.repository.AiSummaryRepository
 import com.aerochaser.domain.repository.GearInsightRepository
 import com.aerochaser.domain.repository.PhotoRepository
 import com.aerochaser.domain.usecase.GetPhotosUseCase
@@ -27,9 +30,12 @@ val appModule = module {
             androidContext(),
             AppDatabase::class.java,
             "aerochaser-db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
     single { get<AppDatabase>().photoDao() }
+    single { get<AppDatabase>().aiSummaryDao() }
 
     // Google Services
     single { FirebaseAnalytics.getInstance(androidContext()) }
@@ -50,7 +56,19 @@ val appModule = module {
 
     single<GearInsightRepository> { com.aerochaser.data.repository.GearInsightRepositoryStub() }
 
+    // AI Summary
+    single<AiSummaryRepository> {
+        GeminiAiSummaryRepository(
+            aiSummaryDao = get(),
+            apiKey = BuildConfig.GEMINI_API_KEY
+        )
+    }
+
+    // Cloud
+    single { com.aerochaser.data.cloud.GoogleDrivePhotoSource(androidContext()) }
+
     // ViewModels
     viewModel { TimelineViewModel(get()) }
-    viewModel { PhotoDetailViewModel(get(), get(), get()) }
+    viewModel { PhotoDetailViewModel(get(), get(), get(), get()) }
+    viewModel { com.aerochaser.presentation.cloud.CloudImportViewModel(get(), get()) }
 }

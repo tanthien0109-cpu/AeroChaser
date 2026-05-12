@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.aerochaser" />
+                  <option name="mobileSdkAppId" value="1:862004250970:android:0be1530d7c2e39fa6d0b63" />
+                  <option name="projectId" value="aerochaser" />
+                  <option name="projectNumber" value="862004250970" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

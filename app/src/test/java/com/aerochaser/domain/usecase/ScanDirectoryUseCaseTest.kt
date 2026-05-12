@@ -43,6 +43,7 @@ class ScanDirectoryUseCaseTest {
         override suspend fun savePhotoMetadata(metadata: PhotoMetadata) {
             savedPhotos.add(metadata)
         }
+        override suspend fun photoExistsByUri(uri: String): Boolean = savedPhotos.any { it.localUri == uri }
     }
 
     @Test

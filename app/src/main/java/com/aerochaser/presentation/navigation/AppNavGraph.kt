@@ -1,5 +1,11 @@
 package com.aerochaser.presentation.navigation
 
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -29,6 +35,7 @@ import androidx.navigation.compose.rememberNavController
 import com.aerochaser.presentation.cloud.CloudImportScreen
 import com.aerochaser.presentation.detail.PhotoDetailScreen
 import com.aerochaser.presentation.detail.PhotoDetailViewModel
+import com.aerochaser.presentation.detail.AiSummaryState
 import com.aerochaser.presentation.importing.ImportScreen
 import com.aerochaser.presentation.timeline.TimelineScreen
 import org.koin.androidx.compose.koinViewModel
@@ -97,33 +104,59 @@ fun AppNavGraph() {
             composable(Screen.Cloud.route) {
                 CloudImportScreen()
             }
-            composable(Screen.Detail.route) { backStackEntry ->
+            composable(
+                route = Screen.Detail.route,
+                enterTransition = {
+                    fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                        scaleIn(initialScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                },
+                exitTransition = {
+                    fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                        scaleOut(targetScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                },
+                popEnterTransition = {
+                    fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                        scaleIn(initialScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                },
+                popExitTransition = {
+                    fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                        scaleOut(targetScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
+                }
+            ) { backStackEntry ->
                 val photoId = backStackEntry.arguments?.getString("photoId")
                 if (photoId != null) {
                     val viewModel: PhotoDetailViewModel = koinViewModel()
+
                     LaunchedEffect(photoId) {
-                        viewModel.loadPhoto(photoId)
+                        viewModel.loadPhotos(photoId)
                     }
-                    val photo by viewModel.photo.collectAsState()
+
+                    val allPhotos by viewModel.allPhotos.collectAsState()
+                    val initialPage by viewModel.initialPage.collectAsState()
+                    val currentPhoto by viewModel.currentPhoto.collectAsState()
                     val gearProfile by viewModel.gearProfile.collectAsState()
                     val isGearLoading by viewModel.isGearLoading.collectAsState()
                     val locationName by viewModel.locationName.collectAsState()
-                    
-                    if (photo != null) {
-                        PhotoDetailScreen(
-                            photo = photo!!,
-                            gearProfile = gearProfile,
-                            isGearLoading = isGearLoading,
-                            locationName = locationName,
-                            onBack = { navController.popBackStack() }
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
+                    val aiSummaryState by viewModel.aiSummaryState.collectAsState()
+
+                    PhotoDetailScreen(
+                        photos = allPhotos,
+                        initialPage = initialPage,
+                        currentPhoto = currentPhoto,
+                        gearProfile = gearProfile,
+                        isGearLoading = isGearLoading,
+                        locationName = locationName,
+                        aiSummaryState = aiSummaryState,
+                        onPageSettled = { photo -> viewModel.onPageSettled(photo) },
+                        onGenerateAiSummary = { viewModel.generateAiSummary() },
+                        onBack = { navController.popBackStack() }
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
             }

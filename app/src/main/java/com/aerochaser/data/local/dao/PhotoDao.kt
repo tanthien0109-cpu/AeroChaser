@@ -38,4 +38,7 @@ abstract class PhotoDao {
     @Transaction
     @Query("SELECT * FROM photos WHERE id = :id LIMIT 1")
     abstract suspend fun getPhotoById(id: String): PhotoWithExif?
+
+    @Query("SELECT id FROM photos WHERE localUri = :uri LIMIT 1")
+    abstract suspend fun getPhotoIdByUri(uri: String): String?
 }

@@ -57,4 +57,8 @@ class PhotoRepositoryImpl(
             systemType = HardwareClassifier.classify(exifData?.cameraModel, exifData?.lensModel)
         )
     }
+
+    override suspend fun photoExistsByUri(uri: String): Boolean {
+        return photoDao.getPhotoIdByUri(uri) != null
+    }
 }

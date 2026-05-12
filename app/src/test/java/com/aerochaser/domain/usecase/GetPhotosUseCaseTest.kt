@@ -13,6 +13,7 @@ class GetPhotosUseCaseTest {
         override suspend fun getLocalPhotos(): List<PhotoMetadata> = photos
         override suspend fun getPhotoById(id: String): PhotoMetadata? = photos.find { it.id == id }
         override suspend fun savePhotoMetadata(metadata: PhotoMetadata) {}
+        override suspend fun photoExistsByUri(uri: String): Boolean = photos.any { it.localUri == uri }
     }
 
     private fun makePhoto(id: String, dateMs: Long) = PhotoMetadata(
