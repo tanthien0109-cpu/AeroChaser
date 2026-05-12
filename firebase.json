@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "AeroChaser",
+        "supportEmail": "koalafied21@gmail.com"
+      }
+    }
+  }
+}

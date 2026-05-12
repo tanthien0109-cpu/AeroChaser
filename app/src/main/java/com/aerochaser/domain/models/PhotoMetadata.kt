@@ -38,5 +38,10 @@ data class PhotoMetadata(
     val focalLength: String?,
     val gpsLat: Double?,
     val gpsLng: Double?,
-    val systemType: HardwareSystemType = HardwareSystemType.UNKNOWN
+    val systemType: HardwareSystemType = HardwareSystemType.UNKNOWN,
+    // Cloud metadata fields
+    val fileName: String? = null,
+    val fileSizeBytes: Long? = null,
+    val modifiedDateMs: Long? = null,
+    val thumbnailUrl: String? = null
 )

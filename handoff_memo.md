@@ -50,7 +50,15 @@ The app uses **Clean Architecture** to maintain a portable domain layer.
 - **Maps Viewer**: `PhotoDetailScreen.kt` now plots photos on a Google Map using EXIF coordinates.
 - **Reverse Geocoding**: `PhotoDetailViewModel.kt` translates coordinates into city names for the UI.
 - **Drive Engine**: `GoogleDrivePhotoSource.kt` provides a robust wrapper for the Drive REST API v3.
-- **Identity Foundation**: Modern Sign-In logic structure (Credential Manager) added to `CloudImportScreen.kt`.
+- **Fixed Google Sign-In Crash/Configuration Error:** 
+  Replaced the modern `CredentialManager` implementation with `GoogleSignInClient` (`play-services-auth`) for the `CloudImportScreen`.
+  **Why:** The `CredentialManager` (specifically `GetGoogleIdOption`) strictly requires a registered Web Client ID. The provided `OAUTH_CLIENT_ID` in `local.properties` was an Android Client ID (`client_type: 1`), which was causing the "Developer console is not set up correctly" exception. By falling back to `GoogleSignInClient`, we successfully bypassed the Web Client ID requirement because it natively supports authentication based solely on the Android SHA-1 fingerprint. The user's Google Account is now successfully retrieved and passed to `GoogleDrivePhotoSource` for Drive permissions.
+
+### Exact task in progress
+- Finalizing testing for Google Sign-In and Cloud Import workflows.
+
+### Build goal
+- A fully functional `AeroChaser` build with robust, crash-free Google Drive connectivity and zero regressions.
 
 ---
 

@@ -66,9 +66,10 @@ val appModule = module {
 
     // Cloud
     single { com.aerochaser.data.cloud.GoogleDrivePhotoSource(androidContext()) }
+    single { com.aerochaser.data.cloud.GooglePhotosSource() }
 
     // ViewModels
     viewModel { TimelineViewModel(get()) }
     viewModel { PhotoDetailViewModel(get(), get(), get(), get()) }
-    viewModel { com.aerochaser.presentation.cloud.CloudImportViewModel(get(), get()) }
+    viewModel { com.aerochaser.presentation.cloud.CloudImportViewModel(androidContext(), get(), get(), get()) }
 }

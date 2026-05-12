@@ -5,6 +5,7 @@ import android.util.Log
 import com.aerochaser.domain.cloud.CloudPhotoSource
 import com.aerochaser.domain.models.PhotoMetadata
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
@@ -67,28 +68,30 @@ class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSource {
     }
 
     /**
-     * Lists top-level folders in the user's Drive.
+     * Lists folders in the user's Drive under the given parent.
+     * @param parentId The parent folder ID, or "root" for top-level folders.
      */
-    suspend fun listFolders(): List<DriveFolder> = withContext(Dispatchers.IO) {
+    suspend fun listFolders(parentId: String = "root"): List<DriveFolder> = withContext(Dispatchers.IO) {
         val service = driveService ?: throw IllegalStateException("Not authenticated with Google Drive")
-        val folders = mutableListOf<DriveFolder>()
 
         try {
             val result = service.files().list()
-                .setQ("mimeType = 'application/vnd.google-apps.folder' and 'root' in parents and trashed = false")
+                .setQ("mimeType = 'application/vnd.google-apps.folder' and '$parentId' in parents and trashed = false")
                 .setSpaces("drive")
                 .setFields("files(id, name)")
                 .setOrderBy("name")
                 .execute()
 
-            result.files?.forEach { file ->
-                folders.add(DriveFolder(id = file.id, name = file.name))
-            }
+            result.files?.map { file ->
+                DriveFolder(id = file.id, name = file.name)
+            } ?: emptyList()
+        } catch (e: UserRecoverableAuthIOException) {
+            Log.e(TAG, "User must grant Drive permission", e)
+            throw DriveAuthException("Google Drive access not granted. Please sign in again with Drive permissions.", e)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list folders", e)
+            throw e
         }
-
-        folders
     }
 
     /**
@@ -113,7 +116,7 @@ class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSource {
                 val request = service.files().list()
                     .setQ(query)
                     .setSpaces("drive")
-                    .setFields("nextPageToken, files(id, name, mimeType, createdTime, imageMediaMetadata)")
+                    .setFields("nextPageToken, files(id, name, mimeType, size, modifiedTime, createdTime, thumbnailLink, imageMediaMetadata)")
                     .setPageSize(100)
 
                 if (pageToken != null) request.pageToken = pageToken
@@ -140,15 +143,23 @@ class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSource {
                         iso = imgMeta?.isoSpeed,
                         focalLength = imgMeta?.focalLength?.toString(),
                         gpsLat = imgMeta?.location?.latitude,
-                        gpsLng = imgMeta?.location?.longitude
+                        gpsLng = imgMeta?.location?.longitude,
+                        fileName = file.name,
+                        fileSizeBytes = file.getSize()?.toLong(),
+                        modifiedDateMs = file.modifiedTime?.value,
+                        thumbnailUrl = file.thumbnailLink
                     )
                     photos.add(metadata)
                 }
 
                 pageToken = result.nextPageToken
             } while (pageToken != null)
+        } catch (e: UserRecoverableAuthIOException) {
+            Log.e(TAG, "User must grant Drive permission", e)
+            throw DriveAuthException("Google Drive access not granted. Please sign in again with Drive permissions.", e)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch photos: ${e.message}", e)
+            throw e
         }
 
         return photos
@@ -162,3 +173,9 @@ data class DriveFolder(
     val id: String,
     val name: String
 )
+
+/**
+ * Thrown when the user has not granted Drive OAuth permission.
+ * The UI should prompt re-authentication with the correct scopes.
+ */
+class DriveAuthException(message: String, cause: Throwable? = null) : Exception(message, cause)
