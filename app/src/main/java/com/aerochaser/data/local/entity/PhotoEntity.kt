@@ -8,5 +8,10 @@ data class PhotoEntity(
     @PrimaryKey val id: String,
     val localUri: String,
     val captureDateMs: Long,
-    val importedAtMs: Long
+    val importedAtMs: Long,
+    // Cloud metadata fields
+    val fileName: String? = null,
+    val fileSizeBytes: Long? = null,
+    val modifiedDateMs: Long? = null,
+    val thumbnailUrl: String? = null
 )

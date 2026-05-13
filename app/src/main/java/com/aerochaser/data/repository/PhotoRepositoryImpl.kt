@@ -25,7 +25,11 @@ class PhotoRepositoryImpl(
             id = metadata.id,
             localUri = metadata.localUri,
             captureDateMs = metadata.captureDateMs,
-            importedAtMs = System.currentTimeMillis()
+            importedAtMs = System.currentTimeMillis(),
+            fileName = metadata.fileName,
+            fileSizeBytes = metadata.fileSizeBytes,
+            modifiedDateMs = metadata.modifiedDateMs,
+            thumbnailUrl = metadata.thumbnailUrl
         )
         val exifEntity = ExifDataEntity(
             photoId = metadata.id,
@@ -54,7 +58,11 @@ class PhotoRepositoryImpl(
             focalLength = exifData?.focalLength,
             gpsLat = exifData?.gpsLat,
             gpsLng = exifData?.gpsLng,
-            systemType = HardwareClassifier.classify(exifData?.cameraModel, exifData?.lensModel)
+            systemType = HardwareClassifier.classify(exifData?.cameraModel, exifData?.lensModel),
+            fileName = photo.fileName,
+            fileSizeBytes = photo.fileSizeBytes,
+            modifiedDateMs = photo.modifiedDateMs,
+            thumbnailUrl = photo.thumbnailUrl
         )
     }
 
