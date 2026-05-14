@@ -122,6 +122,7 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 
     // Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:32.7.2"))

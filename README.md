@@ -14,8 +14,8 @@ Automatically reads EXIF metadata (capture date, camera body, lens, GPS coordina
 ### 🗺️ Interactive Map Viewer
 Each photo's GPS coordinates are plotted on a Google Map with reverse-geocoded city names — so you always know _where_ that 747 was parked.
 
-### ☁️ Google Drive Import
-Sign in with your Google account via Credential Manager and browse your Drive folders to import aviation photos directly into the app. Background downloads are powered by WorkManager for resilience across app restarts and network interruptions.
+### ☁️ Cloud Import (Drive & Photos)
+Sign in with your Google account via Credential Manager to browse Google Drive folders or Google Photos albums. Background imports are powered by WorkManager for resilience, with built-in **Cross-Provider Duplicate Detection** to ensure the same image isn't imported twice across different services.
 
 ### 🤖 AI Gear Overview (Gemini)
 Expand the AI panel on any photo to get an on-demand summary of the camera and lens combination used. Powered by the Gemini generative AI SDK, with results cached locally in Room for instant recall.
@@ -44,7 +44,7 @@ com.aerochaser/
 │
 ├── data/             ← Android-specific implementations
 │   ├── local/        ← Room DB, DAOs, EXIF parsing, WorkManager workers
-│   ├── cloud/        ← GoogleDrivePhotoSource (Drive REST v3)
+│   ├── cloud/        ← Drive (SDK) and Photos (REST) sources
 │   ├── ai/           ← GeminiAiSummaryRepository
 │   └── repository/   ← Repository implementations
 │
@@ -71,7 +71,7 @@ com.aerochaser/
 | **DI** | Koin |
 | **Database** | Room (SQLite) |
 | **Background** | WorkManager |
-| **Cloud** | Google Drive REST API v3 · Credential Manager |
+| **Cloud** | Google Drive v3 · Google Photos REST API |
 | **AI** | Google Gemini Generative AI SDK |
 | **Maps** | Google Maps SDK · Maps Compose |
 | **Auth** | Google Identity Services · Play Services Auth |

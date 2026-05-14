@@ -22,7 +22,7 @@ graph TD
         RepoImpl[Repository Implementations]
         Room[Room Database (Local Cache)]
         LocalSrc[Local File System (SAF)]
-        CloudSrc[Google Drive API / Cloud Storage]
+        CloudSrc[Google Drive & Photos API]
     end
 
     UI --> VM

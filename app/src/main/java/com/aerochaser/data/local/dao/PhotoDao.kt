@@ -41,4 +41,7 @@ abstract class PhotoDao {
 
     @Query("SELECT id FROM photos WHERE localUri = :uri LIMIT 1")
     abstract suspend fun getPhotoIdByUri(uri: String): String?
+
+    @Query("SELECT id FROM photos WHERE fileName = :fileName AND fileSizeBytes = :sizeBytes LIMIT 1")
+    abstract suspend fun getPhotoIdByMetadata(fileName: String, sizeBytes: Long): String?
 }

@@ -69,4 +69,21 @@ class PhotoRepositoryImpl(
     override suspend fun photoExistsByUri(uri: String): Boolean {
         return photoDao.getPhotoIdByUri(uri) != null
     }
+
+    override suspend fun photoExists(metadata: PhotoMetadata): Boolean {
+        // First check exact URI match (local file or same cloud source)
+        if (photoDao.getPhotoIdByUri(metadata.localUri) != null) {
+            return true
+        }
+        
+        // If it's a cloud photo, checking by URI might fail across providers (Drive vs Photos)
+        // Fallback to checking fileName and fileSizeBytes if they exist
+        if (!metadata.fileName.isNullOrEmpty() && metadata.fileSizeBytes != null) {
+            if (photoDao.getPhotoIdByMetadata(metadata.fileName, metadata.fileSizeBytes) != null) {
+                return true
+            }
+        }
+        
+        return false
+    }
 }

@@ -64,6 +64,15 @@ sealed interface PhotosState {
     data class Error(val message: String) : PhotosState
 }
 
+/**
+ * ViewModel responsible for managing the Google Cloud import flows (Drive and Photos).
+ * 
+ * It handles:
+ * 1. OAuth authentication states via [CloudAuthState].
+ * 2. Tab-based navigation between Google Drive folders and Google Photos albums.
+ * 3. Breadcrumb-based folder navigation for Drive.
+ * 4. Background photo metadata import with progress tracking and duplicate prevention.
+ */
 class CloudImportViewModel(
     private val appContext: Context,
     private val drivePhotoSource: GoogleDrivePhotoSource,
@@ -207,7 +216,7 @@ class CloudImportViewModel(
 
             for ((index, photo) in photos.withIndex()) {
                 try {
-                    val exists = photoRepository.photoExistsByUri(photo.localUri)
+                    val exists = photoRepository.photoExists(photo)
                     if (exists) {
                         skipped++
                     } else {
@@ -293,7 +302,7 @@ class CloudImportViewModel(
 
             for ((index, photo) in photos.withIndex()) {
                 try {
-                    val exists = photoRepository.photoExistsByUri(photo.localUri)
+                    val exists = photoRepository.photoExists(photo)
                     if (exists) {
                         skipped++
                     } else {
