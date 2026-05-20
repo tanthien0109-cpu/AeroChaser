@@ -88,7 +88,7 @@ open class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSour
             } ?: emptyList()
         } catch (e: UserRecoverableAuthIOException) {
             Log.e(TAG, "User must grant Drive permission", e)
-            throw DriveAuthException("Google Drive access not granted. Please sign in again with Drive permissions.", e)
+            throw DriveAuthException("Google Drive access not granted. Please ensure you checked and granted the Google Drive permission on the sign-in consent screen.", e)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list folders", e)
             throw e
@@ -157,7 +157,7 @@ open class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSour
             } while (pageToken != null)
         } catch (e: UserRecoverableAuthIOException) {
             Log.e(TAG, "User must grant Drive permission", e)
-            throw DriveAuthException("Google Drive access not granted. Please sign in again with Drive permissions.", e)
+            throw DriveAuthException("Google Drive access not granted. Please ensure you checked and granted the Google Drive permission on the sign-in consent screen.", e)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch photos: ${e.message}", e)
             throw e

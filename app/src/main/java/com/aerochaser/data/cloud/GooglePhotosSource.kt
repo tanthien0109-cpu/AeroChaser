@@ -213,7 +213,7 @@ open class GooglePhotosSource {
             Log.e(TAG, "Photos API error $responseCode: $errorBody")
 
             if (responseCode == 401 || responseCode == 403) {
-                throw PhotosApiException("Google Photos access denied (HTTP $responseCode). You may need to sign in again.", responseCode)
+                throw PhotosApiException("Google Photos access denied (HTTP $responseCode). Please ensure you checked and granted the Google Photos permission on the sign-in consent screen.", responseCode)
             }
             throw PhotosApiException("Google Photos API error (HTTP $responseCode)", responseCode)
         }
