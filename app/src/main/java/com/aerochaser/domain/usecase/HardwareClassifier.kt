@@ -11,7 +11,7 @@ object HardwareClassifier {
     private val SMARTPHONE_BRANDS = setOf(
         "apple", "iphone", "samsung", "galaxy", "xiaomi", "redmi", "poco",
         "google", "pixel", "oneplus", "vivo", "oppo", "huawei", "honor",
-        "motorola", "moto", "sony ericsson", "nokia", "asus", "rog"
+        "motorola", "moto", "sony ericsson", "nokia", "asus", "rog", "xperia"
     )
 
     private val DEDICATED_CAMERA_BRANDS = setOf(

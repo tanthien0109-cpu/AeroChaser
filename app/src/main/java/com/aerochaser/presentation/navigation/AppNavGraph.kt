@@ -32,6 +32,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.aerochaser.presentation.cloud.CloudImportScreen
 import com.aerochaser.presentation.detail.PhotoDetailScreen
 import com.aerochaser.presentation.detail.PhotoDetailViewModel
@@ -106,6 +108,7 @@ fun AppNavGraph() {
             }
             composable(
                 route = Screen.Detail.route,
+                arguments = listOf(navArgument("photoId") { type = NavType.StringType }),
                 enterTransition = {
                     fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
                         scaleIn(initialScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow))

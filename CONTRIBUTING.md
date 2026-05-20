@@ -1,42 +1,62 @@
 # Contributing to AeroChaser ✈️
 
-Thank you for your interest in contributing to AeroChaser! We welcome contributions from the aviation and developer communities to make this the best photo hub for plane spotters.
+Thank you for your interest in contributing to AeroChaser! As a cloud-connected aviation photo hub, we maintain high standards of code quality, architecture compliance, and user experience.
 
-## Our Philosophy
+---
 
-AeroChaser is built on **Clean Architecture** principles. We prioritize:
-1.  **Platform Independence**: The `domain` layer must remain pure Kotlin with no Android dependencies.
-2.  **Performance**: Avoid N+1 queries in Room, use WorkManager for long-running tasks, and optimize Compose recompositions.
-3.  **Aesthetics**: Follow Material 3 guidelines and maintain a premium, high-contrast look.
+## 1. Architectural Guidelines
 
-## How to Contribute
+AeroChaser is built using **Clean Architecture** to separate business logic from platform-specific frameworks.
 
-### 1. Development Environment
-- Use **Android Studio Hedgehog** (or newer).
-- Set up `local.properties` with the required API keys (Maps, OAuth, Gemini) as described in the [README](README.md).
+### Directory Structure
+- **`domain/`**: Pure Kotlin layer containing business logic (Use Cases, Domain Models, Repository Interfaces).
+  - **CRITICAL REQUIREMENT:** The domain layer must have **zero Android framework dependencies or imports** (no `Context`, no Android classes). This keeps the core logic completely portable.
+- **`data/`**: Android and web-specific implementations (Room Database, API network clients, WorkManager workers, Exif parsers).
+- **`presentation/`**: Jetpack Compose screen components, ViewModels, and navigation.
+- **`di/`**: Dependency injection wiring via Koin.
 
-### 2. Branching Policy
-- Create a feature branch from `main`: `feature/your-feature-name`.
-- Bug fixes should use: `fix/issue-description`.
+### Adding New Features
+1. Define the necessary domain model in `domain/models/`.
+2. Define the repository contract interface in `domain/repository/`.
+3. Implement use cases in `domain/usecase/` to coordinate actions.
+4. Implement the repository interface in `data/repository/` or specialized source classes.
+5. Create UI screens in `presentation/` and bind them in `AppNavGraph.kt`.
+6. Register all new ViewModels, Repositories, Use Cases, and Data Sources in `di/AppModule.kt`.
 
-### 3. Coding Standards
-- **Kotlin DSL**: Use Kotlin for all Gradle files.
-- **Compose**: Use standard Material 3 components. Annotate stable models if necessary for performance.
-- **Dependency Injection**: Use **Koin** for all dependency management.
-- **Logging**: Use `Log.d(TAG, ...)` with a consistent class-level tag. Avoid `println`.
+---
 
-### 4. Pull Request Process
-- Ensure your code builds successfully: `./gradlew assembleDebug`.
-- Run all tests: `./gradlew test` and `./gradlew connectedAndroidTest`.
-- Update documentation if you add new features or change existing architecture.
-- Request a review and address any feedback.
+## 2. Coding Standards
 
-## Adding New Cloud Sources
-If you wish to add a new cloud provider (e.g., Dropbox, OneDrive):
-1.  Add a new implementation of `CloudPhotoSource` in the `data.cloud` package.
-2.  Define the necessary API integration (REST or SDK).
-3.  Update `CloudImportViewModel` and `CloudImportScreen` to include the new service tab.
-4.  Ensure **Duplicate Detection** is handled correctly via `PhotoRepository.photoExists(metadata)`.
+### Kotlin & Gradle
+- Use Kotlin DSL (`.gradle.kts`) for all build scripts.
+- Use Kotlin Coroutines and Flows for asynchronous data management and reactive state propagation.
+- Keep variables private and expose immutable state (e.g., expose `StateFlow<T>` instead of `MutableStateFlow<T>`).
 
-## License
-By contributing, you agree that your contributions will be licensed under the project's [LICENSE](LICENSE).
+### Jetpack Compose UI
+- Use **Material 3** guidelines and components.
+- Ensure all screens dynamically adapt to the application theme (light/dark mode, Material You dynamic colors).
+- Use `remember` and `derivedStateOf` to prevent unnecessary recompositions in complex UIs.
+- Pass specific `key` fields to lazy layout items (e.g. `items(list, key = { it.id })`) to avoid list flickering and performance stutter.
+- Provide descriptive `contentDescription` attributes on all icons and interactive items for screen readers and accessibility.
+
+### Multi-threading & Safety
+- **Network Requests:** Always wrap HTTP and API network requests in `try-finally` blocks and call `disconnect()` on connection resources to prevent socket leaks.
+- **Thread Visibility:** Mark mutable state shared across coroutine dispatchers (such as access tokens or API clients) with the `@Volatile` annotation.
+- **Thread-Safe Helpers:** Ensure formatting or parsing classes that are not thread-safe (e.g., `SimpleDateFormat`) are wrapped in `ThreadLocal` or run inside confined thread instances.
+
+---
+
+## 3. Pull Request Checklist
+
+Before submitting a pull request, please verify that:
+1. All changes compile cleanly:
+   ```bash
+   ./gradlew assembleDebug
+   ```
+2. All unit tests pass:
+   ```bash
+   ./gradlew test
+   ```
+3. The domain layer remains completely free of Android framework dependencies.
+4. No sensitive information, API keys, or private accounts are tracked in git (`local.properties` is utilized).
+5. The `README.md` and `architecture_visualization.md` are updated if your changes add or modify core architecture features.

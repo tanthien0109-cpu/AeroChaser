@@ -15,13 +15,17 @@ class AndroidExifParser(private val context: Context) : ExifParser {
 
     companion object {
         private const val TAG = "AndroidExifParser"
-        private val EXIF_DATE_FORMAT = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
+        private val EXIF_DATE_FORMAT = object : ThreadLocal<SimpleDateFormat>() {
+            override fun initialValue(): SimpleDateFormat {
+                return SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
+            }
+        }
     }
 
-    override suspend fun parseExif(uriString: String, photoId: String): PhotoMetadata? {
+    override suspend fun parseExif(uri: String, photoId: String): PhotoMetadata? {
         return try {
-            val uri = Uri.parse(uriString)
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            val parsedUri = Uri.parse(uri)
+            context.contentResolver.openInputStream(parsedUri)?.use { inputStream ->
                 val exifInterface = ExifInterface(inputStream)
 
                 val dateTimeStr = exifInterface.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
@@ -44,7 +48,7 @@ class AndroidExifParser(private val context: Context) : ExifParser {
 
                 PhotoMetadata(
                     id = photoId,
-                    localUri = uriString,
+                    localUri = uri,
                     captureDateMs = captureDateMs,
                     cameraModel = cameraModel,
                     lensModel = lensModel,
@@ -58,7 +62,7 @@ class AndroidExifParser(private val context: Context) : ExifParser {
                 )
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse EXIF for uri=$uriString, photoId=$photoId", e)
+            Log.e(TAG, "Failed to parse EXIF for uri=$uri, photoId=$photoId", e)
             null
         }
     }
@@ -66,7 +70,8 @@ class AndroidExifParser(private val context: Context) : ExifParser {
     private fun parseDateToMs(dateTimeStr: String?): Long {
         if (dateTimeStr.isNullOrBlank()) return System.currentTimeMillis()
         return try {
-            EXIF_DATE_FORMAT.parse(dateTimeStr)?.time ?: System.currentTimeMillis()
+            val format = EXIF_DATE_FORMAT.get() ?: SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
+            format.parse(dateTimeStr)?.time ?: System.currentTimeMillis()
         } catch (e: Exception) {
             Log.w(TAG, "Failed to parse EXIF date: $dateTimeStr", e)
             System.currentTimeMillis()

@@ -486,6 +486,10 @@ private fun LocationSection(lat: Double, lng: Double, locationName: String?) {
         this.position = CameraPosition.fromLatLngZoom(position, 12f)
     }
 
+    LaunchedEffect(lat, lng) {
+        cameraPositionState.position = CameraPosition.fromLatLngZoom(position, 12f)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()

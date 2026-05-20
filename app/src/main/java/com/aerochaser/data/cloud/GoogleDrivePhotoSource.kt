@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
  * - [fetchPhotos] queries for image files
  * - [listFolders] lists top-level Drive folders for browsing
  */
-class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSource {
+open class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSource {
 
     companion object {
         private const val TAG = "GoogleDrivePhotoSource"
@@ -35,6 +35,7 @@ class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSource {
     private val _isAuthenticated = MutableStateFlow(false)
     override val isAuthenticated: Flow<Boolean> = _isAuthenticated
 
+    @Volatile
     private var driveService: Drive? = null
 
     override suspend fun authenticate() {
@@ -46,7 +47,7 @@ class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSource {
      * Called by the UI after CredentialManager sign-in succeeds.
      * Builds the Drive REST client with DRIVE_READONLY scope.
      */
-    fun updateAuth(account: android.accounts.Account?) {
+    open fun updateAuth(account: android.accounts.Account?) {
         if (account == null) {
             _isAuthenticated.value = false
             driveService = null
@@ -71,7 +72,7 @@ class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSource {
      * Lists folders in the user's Drive under the given parent.
      * @param parentId The parent folder ID, or "root" for top-level folders.
      */
-    suspend fun listFolders(parentId: String = "root"): List<DriveFolder> = withContext(Dispatchers.IO) {
+    open suspend fun listFolders(parentId: String = "root"): List<DriveFolder> = withContext(Dispatchers.IO) {
         val service = driveService ?: throw IllegalStateException("Not authenticated with Google Drive")
 
         try {
@@ -97,7 +98,7 @@ class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSource {
     /**
      * Lists photos in a specific Drive folder.
      */
-    suspend fun fetchPhotosInFolder(folderId: String): List<PhotoMetadata> = withContext(Dispatchers.IO) {
+    open suspend fun fetchPhotosInFolder(folderId: String): List<PhotoMetadata> = withContext(Dispatchers.IO) {
         val service = driveService ?: throw IllegalStateException("Not authenticated with Google Drive")
         fetchPhotosWithQuery(service, "'$folderId' in parents and mimeType contains 'image/' and trashed = false")
     }

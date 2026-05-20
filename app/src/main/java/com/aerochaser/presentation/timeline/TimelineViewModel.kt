@@ -14,10 +14,10 @@ class TimelineViewModel(private val getPhotosUseCase: GetPhotosUseCase) : ViewMo
     val uiState: StateFlow<TimelineUiState> = _uiState.asStateFlow()
 
     init {
-        loadPhotos()
+        refresh()
     }
 
-    private fun loadPhotos() {
+    fun refresh() {
         viewModelScope.launch {
             try {
                 val photos = getPhotosUseCase()

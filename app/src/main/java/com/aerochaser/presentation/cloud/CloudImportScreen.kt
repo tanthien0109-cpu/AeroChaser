@@ -2,7 +2,7 @@ package com.aerochaser.presentation.cloud
 
 import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
+
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -62,11 +62,11 @@ fun CloudImportScreen(viewModel: CloudImportViewModel = koinViewModel()) {
         Text("Import photos from Google Drive & Photos", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(16.dp))
 
-        when (authState) {
+        when (val state = authState) {
             is CloudAuthState.SignedOut -> SignedOutView(viewModel)
             is CloudAuthState.SigningIn -> LoadingView("Signing in…")
             is CloudAuthState.SignedIn -> {
-                val email = (authState as CloudAuthState.SignedIn).email
+                val email = state.email
                 AccountBar(email, viewModel)
                 Spacer(modifier = Modifier.height(12.dp))
                 CloudTabBar(activeTab, onTabSelected = { viewModel.setActiveTab(it) })
@@ -77,7 +77,7 @@ fun CloudImportScreen(viewModel: CloudImportViewModel = koinViewModel()) {
                 }
             }
             is CloudAuthState.Error -> {
-                ErrorCard((authState as CloudAuthState.Error).message) {}
+                ErrorCard(state.message) {}
                 Spacer(modifier = Modifier.height(16.dp))
                 SignedOutView(viewModel)
             }
@@ -174,7 +174,7 @@ private fun DriveView(viewModel: CloudImportViewModel) {
                 EmptyState("No folders found", "This folder is empty.")
             } else {
                 LazyColumn {
-                    items(state.folders) { folder ->
+                    items(state.folders, key = { it.id }) { folder ->
                         FolderItem(folder, onClick = { viewModel.navigateIntoFolder(folder.id, folder.name) }, onViewPhotos = { viewModel.loadDrivePhotosInFolder(folder.id, folder.name) })
                     }
                 }
@@ -198,7 +198,7 @@ private fun DriveView(viewModel: CloudImportViewModel) {
                 EmptyState("No photos found", "This folder contains no image files.")
             } else {
                 LazyColumn {
-                    items(state.photos) { photo -> PhotoItem(photo) }
+                    items(state.photos, key = { it.id }) { photo -> PhotoItem(photo) }
                 }
             }
         }
@@ -239,7 +239,7 @@ private fun PhotosView(viewModel: CloudImportViewModel) {
                 Text("Your Albums", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(state.albums) { album -> AlbumCard(album, onClick = { viewModel.loadPhotosInAlbum(album.id, album.title) }) }
+                    items(state.albums, key = { it.id }) { album -> AlbumCard(album, onClick = { viewModel.loadPhotosInAlbum(album.id, album.title) }) }
                 }
             }
         }
@@ -261,7 +261,7 @@ private fun PhotosView(viewModel: CloudImportViewModel) {
                 EmptyState("No photos", "This album is empty.")
             } else {
                 LazyVerticalGrid(columns = GridCells.Fixed(3), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    items(state.photos) { photo -> PhotoThumbnail(photo) }
+                    items(state.photos, key = { it.id }) { photo -> PhotoThumbnail(photo) }
                 }
             }
         }
@@ -420,11 +420,3 @@ private fun formatFileSize(bytes: Long): String {
     }
 }
 
-private fun Context.findActivity(): Activity? {
-    var ctx: Context = this
-    while (ctx is ContextWrapper) {
-        if (ctx is Activity) return ctx
-        ctx = ctx.baseContext
-    }
-    return null
-}

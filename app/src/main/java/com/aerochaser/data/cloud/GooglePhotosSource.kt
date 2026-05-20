@@ -21,20 +21,21 @@ import java.net.URL
  * - On success, the access token is passed via [updateAuth]
  * - All API calls use Bearer token authentication
  */
-class GooglePhotosSource {
+open class GooglePhotosSource {
 
     companion object {
         private const val TAG = "GooglePhotosSource"
         private const val BASE_URL = "https://photoslibrary.googleapis.com/v1"
     }
 
+    @Volatile
     private var accessToken: String? = null
 
     /**
      * Called by the ViewModel after sign-in succeeds.
      * @param token The OAuth2 access token with photoslibrary.readonly scope.
      */
-    fun updateAuth(token: String?) {
+    open fun updateAuth(token: String?) {
         accessToken = token
         if (token != null) {
             Log.d(TAG, "Photos source authenticated")
@@ -98,11 +99,11 @@ class GooglePhotosSource {
         try {
             var pageToken: String? = null
             do {
-                val requestBody = buildString {
-                    append("{\"albumId\":\"$albumId\",\"pageSize\":100")
-                    if (pageToken != null) append(",\"pageToken\":\"$pageToken\"")
-                    append("}")
-                }
+                val requestBody = JSONObject().apply {
+                    put("albumId", albumId)
+                    put("pageSize", 100)
+                    if (pageToken != null) put("pageToken", pageToken)
+                }.toString()
 
                 val response = makePostRequest("$BASE_URL/mediaItems:search", token, requestBody)
                 val json = JSONObject(response)
@@ -164,31 +165,39 @@ class GooglePhotosSource {
     private fun makeGetRequest(urlStr: String, token: String): String {
         val url = URL(urlStr)
         val conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Authorization", "Bearer $token")
-        conn.setRequestProperty("Accept", "application/json")
-        conn.connectTimeout = 15_000
-        conn.readTimeout = 15_000
+        try {
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.setRequestProperty("Accept", "application/json")
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 15_000
 
-        return handleResponse(conn)
+            return handleResponse(conn)
+        } finally {
+            conn.disconnect()
+        }
     }
 
     private fun makePostRequest(urlStr: String, token: String, body: String): String {
         val url = URL(urlStr)
         val conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Authorization", "Bearer $token")
-        conn.setRequestProperty("Content-Type", "application/json")
-        conn.setRequestProperty("Accept", "application/json")
-        conn.connectTimeout = 15_000
-        conn.readTimeout = 15_000
-        conn.doOutput = true
+        try {
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Accept", "application/json")
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 15_000
+            conn.doOutput = true
 
-        conn.outputStream.use { os ->
-            os.write(body.toByteArray(Charsets.UTF_8))
+            conn.outputStream.use { os ->
+                os.write(body.toByteArray(Charsets.UTF_8))
+            }
+
+            return handleResponse(conn)
+        } finally {
+            conn.disconnect()
         }
-
-        return handleResponse(conn)
     }
 
     private fun handleResponse(conn: HttpURLConnection): String {

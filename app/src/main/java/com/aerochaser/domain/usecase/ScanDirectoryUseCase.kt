@@ -15,6 +15,8 @@ class ScanDirectoryUseCase(
         var importedCount = 0
 
         for (fileUri in files) {
+            if (photoRepository.photoExistsByUri(fileUri)) continue
+
             val photoId = UUID.randomUUID().toString()
             val metadata = exifParser.parseExif(fileUri, photoId)
             

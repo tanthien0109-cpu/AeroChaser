@@ -12,10 +12,10 @@ AeroChaser turns your plane-spotting photos into a rich, location-aware, AI-enha
 Automatically reads EXIF metadata (capture date, camera body, lens, GPS coordinates) and builds a reverse-chronological timeline of every sighting.
 
 ### 🗺️ Interactive Map Viewer
-Each photo's GPS coordinates are plotted on a Google Map with reverse-geocoded city names — so you always know _where_ that 747 was parked.
+Each photo's GPS coordinates are plotted on a Google Map with reverse-geocoded city names — so you always know _where_ that 747 was parked. Map viewport updates dynamically as you swipe between photos.
 
 ### ☁️ Cloud Import (Drive & Photos)
-Sign in with your Google account via Credential Manager to browse Google Drive folders or Google Photos albums. Background imports are powered by WorkManager for resilience, with built-in **Cross-Provider Duplicate Detection** to ensure the same image isn't imported twice across different services.
+Sign in with your Google account via Google Sign-In to browse Google Drive folders or Google Photos albums. Background imports are powered by WorkManager for resilience, with built-in **Cross-Provider Duplicate Detection** to ensure the same image isn't imported twice across different services.
 
 ### 🤖 AI Gear Overview (Gemini)
 Expand the AI panel on any photo to get an on-demand summary of the camera and lens combination used. Powered by the Gemini generative AI SDK, with results cached locally in Room for instant recall.
@@ -164,4 +164,4 @@ Or simply open the project in Android Studio and hit **Run**.
 
 ## License
 
-Copyright © 2026 AeroChaser. All rights reserved.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -57,6 +57,10 @@ class PhotoRepositoryImplTest {
         override suspend fun getPhotoIdByUri(uri: String): String? {
             return photos.values.find { it.localUri == uri }?.id
         }
+
+        override suspend fun getPhotoIdByMetadata(fileName: String, sizeBytes: Long): String? {
+            return photos.values.find { it.fileName == fileName && it.fileSizeBytes == sizeBytes }?.id
+        }
     }
 
     private lateinit var fakeDao: FakePhotoDao

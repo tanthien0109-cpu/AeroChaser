@@ -137,8 +137,9 @@ class PhotoDetailViewModel(
                     val name = address.locality ?: address.subAdminArea ?: address.adminArea ?: address.countryName
                     _locationName.value = name
                 }
-            } catch (e: Exception) {
+            } catch (e: java.io.IOException) {
                 // Geocoding failure is non-critical; the map still shows lat/lng
+                android.util.Log.w("PhotoDetailViewModel", "Geocoding network error: ${e.message}")
             }
         }
     }

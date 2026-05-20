@@ -108,7 +108,7 @@ class CloudImportViewModel(
     fun onSignInSuccess(account: android.accounts.Account, email: String) {
         drivePhotoSource.updateAuth(account)
         _authState.value = CloudAuthState.SignedIn(email)
-        Log.d(TAG, "Signed in as: $email")
+        Log.d(TAG, "Sign-in successful")
         // Auto-load Drive folders
         loadDriveFolders()
         // Fetch Photos access token in background, then load albums
