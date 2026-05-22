@@ -37,7 +37,14 @@ class ImportWorker(
         Log.i(TAG, "Starting import from: $directoryUri")
 
         return try {
-            val importedCount = scanDirectoryUseCase(directoryUri)
+            val importedCount = scanDirectoryUseCase(directoryUri) { current, total ->
+                setProgress(
+                    Data.Builder()
+                        .putInt("CURRENT", current)
+                        .putInt("TOTAL", total)
+                        .build()
+                )
+            }
             Log.i(TAG, "Import complete: $importedCount photos imported from $directoryUri")
             Result.success(
                 Data.Builder()

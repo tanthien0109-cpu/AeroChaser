@@ -10,11 +10,16 @@ class ScanDirectoryUseCase(
     private val exifParser: ExifParser,
     private val photoRepository: PhotoRepository
 ) {
-    suspend operator fun invoke(directoryUri: String): Int {
+    suspend operator fun invoke(
+        directoryUri: String,
+        onProgress: (suspend (current: Int, total: Int) -> Unit)? = null
+    ): Int {
         val files = fileIO.getFilesFromDirectory(directoryUri)
+        val total = files.size
         var importedCount = 0
 
-        for (fileUri in files) {
+        for ((index, fileUri) in files.withIndex()) {
+            onProgress?.invoke(index, total)
             if (photoRepository.photoExistsByUri(fileUri)) continue
 
             val photoId = UUID.randomUUID().toString()
@@ -25,6 +30,7 @@ class ScanDirectoryUseCase(
                 importedCount++
             }
         }
+        onProgress?.invoke(total, total)
         return importedCount
     }
 }
