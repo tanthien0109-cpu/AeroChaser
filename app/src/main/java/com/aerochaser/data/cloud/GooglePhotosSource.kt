@@ -1,14 +1,17 @@
 package com.aerochaser.data.cloud
 
 import android.util.Log
+import com.aerochaser.domain.cloud.CloudPhotoSource
 import com.aerochaser.domain.models.PhotoMetadata
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 
 /**
  * Google Photos Library API integration for AeroChaser.
@@ -21,15 +24,25 @@ import java.net.URL
  * - On success, the access token is passed via [updateAuth]
  * - All API calls use Bearer token authentication
  */
-open class GooglePhotosSource {
+open class GooglePhotosSource : CloudPhotoSource {
 
     companion object {
         private const val TAG = "GooglePhotosSource"
         private const val BASE_URL = "https://photoslibrary.googleapis.com/v1"
     }
 
+    override val sourceName: String = "Google Photos"
+
+    private val _isAuthenticated = MutableStateFlow(false)
+    override val isAuthenticated: Flow<Boolean> = _isAuthenticated
+
     @Volatile
     private var accessToken: String? = null
+
+    override suspend fun authenticate() {
+        // Authentication is handled via the UI (GoogleSignIn).
+        // Once signed in, the UI calls updateAuth() with the access token.
+    }
 
     /**
      * Called by the ViewModel after sign-in succeeds.
@@ -37,11 +50,81 @@ open class GooglePhotosSource {
      */
     open fun updateAuth(token: String?) {
         accessToken = token
+        _isAuthenticated.value = token != null
         if (token != null) {
             Log.d(TAG, "Photos source authenticated")
         } else {
             Log.d(TAG, "Photos source cleared")
         }
+    }
+
+    override suspend fun fetchPhotos(): List<PhotoMetadata> = withContext(Dispatchers.IO) {
+        val token = accessToken ?: throw IllegalStateException("Not authenticated with Google Photos")
+        val photos = mutableListOf<PhotoMetadata>()
+
+        try {
+            var pageToken: String? = null
+            do {
+                val urlStr = buildString {
+                    append("$BASE_URL/mediaItems?pageSize=100")
+                    if (pageToken != null) append("&pageToken=$pageToken")
+                }
+
+                val response = makeGetRequest(urlStr, token)
+                val json = JSONObject(response)
+
+                json.optJSONArray("mediaItems")?.let { items ->
+                    for (i in 0 until items.length()) {
+                        val item = items.getJSONObject(i)
+                        val mediaMetadata = item.optJSONObject("mediaMetadata")
+                        val photoMeta = mediaMetadata?.optJSONObject("photo")
+
+                        // Only include photos (skip videos)
+                        if (mediaMetadata?.has("photo") == true) {
+                            val creationTime = mediaMetadata.optString("creationTime", "")
+                            val captureMs = try {
+                                java.time.Instant.parse(creationTime).toEpochMilli()
+                            } catch (_: Exception) {
+                                System.currentTimeMillis()
+                            }
+
+                            photos.add(
+                                PhotoMetadata(
+                                    id = item.getString("id"),
+                                    localUri = "photos://${item.getString("id")}",
+                                    captureDateMs = captureMs,
+                                    cameraModel = run {
+                                        val make = photoMeta?.optString("cameraMake", "") ?: ""
+                                        val model = photoMeta?.optString("cameraModel", "") ?: ""
+                                        "$make $model".trim().ifEmpty { null }
+                                    },
+                                    lensModel = null,
+                                    aperture = photoMeta?.optDouble("apertureFNumber")?.takeIf { !it.isNaN() }?.toString(),
+                                    shutterSpeed = null,
+                                    iso = photoMeta?.optInt("isoEquivalent", 0)?.takeIf { it > 0 },
+                                    focalLength = photoMeta?.optDouble("focalLength")?.takeIf { !it.isNaN() }?.toString(),
+                                    gpsLat = null,
+                                    gpsLng = null,
+                                    fileName = item.optString("filename", "Unknown"),
+                                    thumbnailUrl = item.optString("baseUrl", "") + "=w256-h256-c",
+                                    fileSizeBytes = null,
+                                    modifiedDateMs = captureMs
+                                )
+                            )
+                        }
+                    }
+                }
+
+                pageToken = json.optString("nextPageToken", "").ifEmpty { null }
+            } while (pageToken != null)
+        } catch (e: PhotosApiException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch photos", e)
+            throw e
+        }
+
+        photos
     }
 
     /**
@@ -162,9 +245,8 @@ open class GooglePhotosSource {
         photos
     }
 
-    private fun makeGetRequest(urlStr: String, token: String): String {
-        val url = URL(urlStr)
-        val conn = url.openConnection() as HttpURLConnection
+    open fun makeGetRequest(urlStr: String, token: String): String {
+        val conn = URI(urlStr).toURL().openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "GET"
             conn.setRequestProperty("Authorization", "Bearer $token")
@@ -178,9 +260,8 @@ open class GooglePhotosSource {
         }
     }
 
-    private fun makePostRequest(urlStr: String, token: String, body: String): String {
-        val url = URL(urlStr)
-        val conn = url.openConnection() as HttpURLConnection
+    open fun makePostRequest(urlStr: String, token: String, body: String): String {
+        val conn = URI(urlStr).toURL().openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "POST"
             conn.setRequestProperty("Authorization", "Bearer $token")
@@ -213,7 +294,25 @@ open class GooglePhotosSource {
             Log.e(TAG, "Photos API error $responseCode: $errorBody")
 
             if (responseCode == 401 || responseCode == 403) {
-                throw PhotosApiException("Google Photos access denied (HTTP $responseCode). Please ensure you checked and granted the Google Photos permission on the sign-in consent screen.", responseCode)
+                // Parse the Google API error for a more specific message
+                val apiMessage = try {
+                    val errorJson = JSONObject(errorBody)
+                    errorJson.optJSONObject("error")?.optString("message", "") ?: ""
+                } catch (_: Exception) { "" }
+
+                val userMessage = when {
+                    apiMessage.contains("insufficient authentication scopes", ignoreCase = true) ->
+                        "Google Photos access denied: insufficient scopes. " +
+                        "Please ensure the Photos Library API is enabled in the Google Cloud Console " +
+                        "and that the photoslibrary.readonly scope is approved on the OAuth consent screen."
+                    apiMessage.contains("disabled", ignoreCase = true) ->
+                        "Google Photos API is not enabled. " +
+                        "Please enable the Photos Library API in the Google Cloud Console for your project."
+                    else ->
+                        "Google Photos access denied (HTTP $responseCode). " +
+                        "Please ensure you checked and granted the Google Photos permission on the sign-in consent screen."
+                }
+                throw PhotosApiException(userMessage, responseCode)
             }
             throw PhotosApiException("Google Photos API error (HTTP $responseCode)", responseCode)
         }

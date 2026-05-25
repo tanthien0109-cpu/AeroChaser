@@ -16,3 +16,11 @@
 # Firebase
 -dontwarn com.google.firebase.**
 -keep class com.google.firebase.** { *; }
+
+# Prevent obfuscation of Domain Models and Database Entities
+-keep class com.aerochaser.domain.models.** { *; }
+-keep class com.aerochaser.data.local.entity.** { *; }
+
+# Koin DI framework
+-keep class org.koin.** { *; }
+-dontwarn org.koin.**

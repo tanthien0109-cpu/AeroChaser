@@ -32,7 +32,7 @@ open class GoogleDrivePhotoSource(private val context: Context) : CloudPhotoSour
 
     override val sourceName: String = "Google Drive"
 
-    private val _isAuthenticated = MutableStateFlow(false)
+    protected val _isAuthenticated = MutableStateFlow(false)
     override val isAuthenticated: Flow<Boolean> = _isAuthenticated
 
     @Volatile
