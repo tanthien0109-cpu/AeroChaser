@@ -1,6 +1,17 @@
 @file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 package com.aerochaser.presentation.detail
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.collectAsState
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -119,59 +130,151 @@ fun PhotoDetailScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-
-        // ─── Horizontal Photo Pager ─────────────────────────────────────
-        HorizontalPager(
-            state = pagerState,
-            userScrollEnabled = !isCurrentPageZoomed,
-            modifier = Modifier.fillMaxSize()
-        ) { page ->
-            val photo = photos[page]
-            val isSettled = pagerState.settledPage == page
-
-            PhotoPage(
-                photo = photo,
-                isActive = isSettled,
-                onTap = { showPanel = !showPanel },
-                onZoomChanged = { zoomed ->
-                    if (isSettled) isCurrentPageZoomed = zoomed
+    // Tabletop mode detection
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val isTabletopMode = remember(activity) {
+        if (activity == null) flowOf(false)
+        else {
+            WindowInfoTracker.getOrCreate(activity)
+                .windowLayoutInfo(activity)
+                .map { info ->
+                    info.displayFeatures.filterIsInstance<FoldingFeature>().any { feature ->
+                        feature.state == FoldingFeature.State.HALF_OPENED &&
+                            feature.orientation == FoldingFeature.Orientation.HORIZONTAL
+                    }
                 }
-            )
         }
+    }.collectAsState(initial = false).value
 
-        // ─── Page Indicator ─────────────────────────────────────────────
-        if (photos.size > 1) {
-            Text(
-                text = "${pagerState.settledPage + 1} / ${photos.size}",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.7f),
+    if (isTabletopMode) {
+        Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            // Top Half: Horizontal Photo Pager
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 48.dp)
-                    .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
-            )
-        }
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                HorizontalPager(
+                    state = pagerState,
+                    userScrollEnabled = !isCurrentPageZoomed,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    val photo = photos[page]
+                    val isSettled = pagerState.settledPage == page
 
-        // ─── Bottom Metadata Panel ──────────────────────────────────────
-        AnimatedVisibility(
-            visible = showPanel && currentPhoto != null,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomStart)
-        ) {
-            currentPhoto?.let { photo ->
-                MetadataPanel(
+                    PhotoPage(
+                        photo = photo,
+                        isActive = isSettled,
+                        onTap = {}, // tap to toggle panel disabled in tabletop split layout
+                        onZoomChanged = { zoomed ->
+                            if (isSettled) isCurrentPageZoomed = zoomed
+                        }
+                    )
+                }
+
+                // Page Indicator overlay
+                if (photos.size > 1) {
+                    Text(
+                        text = "${pagerState.settledPage + 1} / ${photos.size}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 16.dp)
+                            .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            // High-fidelity Crease Divider (simulating a clean crease line)
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(Color.DarkGray)
+            )
+
+            // Bottom Half: Scrollable Metadata & Console Panel (always expanded)
+            Box(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .fillMaxWidth()
+                    .background(Color.Black)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                currentPhoto?.let { photo ->
+                    MetadataPanel(
+                        photo = photo,
+                        gearProfile = gearProfile,
+                        isGearLoading = isGearLoading,
+                        locationName = locationName,
+                        aiSummaryState = aiSummaryState,
+                        expanded = true, // permanently open in split layout for desk viewing
+                        onToggleExpand = {}, // expand toggle disabled in split tabletop view
+                        onGenerateAiSummary = onGenerateAiSummary
+                    )
+                }
+            }
+        }
+    } else {
+        // Standard full-screen layout with overlapping bottom panel
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+
+            // ─── Horizontal Photo Pager ─────────────────────────────────────
+            HorizontalPager(
+                state = pagerState,
+                userScrollEnabled = !isCurrentPageZoomed,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val photo = photos[page]
+                val isSettled = pagerState.settledPage == page
+
+                PhotoPage(
                     photo = photo,
-                    gearProfile = gearProfile,
-                    isGearLoading = isGearLoading,
-                    locationName = locationName,
-                    aiSummaryState = aiSummaryState,
-                    expanded = panelExpanded,
-                    onToggleExpand = { panelExpanded = !panelExpanded },
-                    onGenerateAiSummary = onGenerateAiSummary
+                    isActive = isSettled,
+                    onTap = { showPanel = !showPanel },
+                    onZoomChanged = { zoomed ->
+                        if (isSettled) isCurrentPageZoomed = zoomed
+                    }
                 )
+            }
+
+            // ─── Page Indicator ─────────────────────────────────────────────
+            if (photos.size > 1) {
+                Text(
+                    text = "${pagerState.settledPage + 1} / ${photos.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 48.dp)
+                        .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+
+            // ─── Bottom Metadata Panel ──────────────────────────────────────
+            AnimatedVisibility(
+                visible = showPanel && currentPhoto != null,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                modifier = Modifier.align(Alignment.BottomStart)
+            ) {
+                currentPhoto?.let { photo ->
+                    MetadataPanel(
+                        photo = photo,
+                        gearProfile = gearProfile,
+                        isGearLoading = isGearLoading,
+                        locationName = locationName,
+                        aiSummaryState = aiSummaryState,
+                        expanded = panelExpanded,
+                        onToggleExpand = { panelExpanded = !panelExpanded },
+                        onGenerateAiSummary = onGenerateAiSummary
+                    )
+                }
             }
         }
     }
@@ -647,4 +750,13 @@ private fun AiOverviewPanel(state: AiSummaryState, onGenerate: () -> Unit) {
             }
         }
     }
+}
+
+private fun Context.findActivity(): Activity? {
+    var ctx: Context = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }

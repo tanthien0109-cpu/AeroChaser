@@ -156,4 +156,7 @@ dependencies {
 
     // Gemini AI (Cloud fallback for gear summaries)
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // Jetpack WindowManager for foldables hinge/crease layout detection
+    implementation("androidx.window:window:1.2.0")
 }

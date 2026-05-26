@@ -11,8 +11,15 @@ class AndroidFileIO(private val context: Context) : FileIO {
         val uri = Uri.parse(directoryUri)
         val documentFile = DocumentFile.fromTreeUri(context, uri) ?: return emptyList()
         
+        val rawExtensions = setOf("dng", "cr2", "cr3", "nef", "arw", "rw2", "orf", "pef", "raf")
         return documentFile.listFiles()
-            .filter { it.isFile && (it.type?.startsWith("image/") == true) }
+            .filter { document ->
+                if (!document.isFile) return@filter false
+                val type = document.type
+                val name = document.name?.lowercase() ?: ""
+                val extension = name.substringAfterLast('.', "")
+                (type?.startsWith("image/") == true) || rawExtensions.contains(extension)
+            }
             .map { it.uri.toString() }
     }
 
