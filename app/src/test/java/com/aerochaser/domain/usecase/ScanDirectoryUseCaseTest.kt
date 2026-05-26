@@ -74,6 +74,28 @@ class ScanDirectoryUseCaseTest {
     }
 
     @Test
+    fun `scan directory containing raw camera files imports all files correctly`() = runTest {
+        val files = listOf(
+            "content://fake/1.jpg",
+            "content://fake/2.dng",
+            "content://fake/3.cr2",
+            "content://fake/4.nef"
+        )
+        val repo = FakePhotoRepository()
+        val useCase = ScanDirectoryUseCase(
+            fileIO = FakeFileIO(files),
+            exifParser = FakeExifParser(shouldSucceed = true),
+            photoRepository = repo
+        )
+        val count = useCase("content://fake/dir")
+        assertEquals(4, count)
+        assertEquals(4, repo.savedPhotos.size)
+        assertEquals("content://fake/2.dng", repo.savedPhotos[1].localUri)
+        assertEquals("content://fake/3.cr2", repo.savedPhotos[2].localUri)
+        assertEquals("content://fake/4.nef", repo.savedPhotos[3].localUri)
+    }
+
+    @Test
     fun `scan directory skips files with unparseable exif`() = runTest {
         val files = listOf("content://fake/corrupted.jpg")
         val repo = FakePhotoRepository()
