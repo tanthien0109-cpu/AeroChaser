@@ -12,6 +12,7 @@ import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -45,6 +46,14 @@ import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -147,6 +156,30 @@ fun PhotoDetailScreen(
         }
     }.collectAsState(initial = false).value
 
+    // Premium Tabletop Autoplay Slideshow & Multi-tasking State Hooks
+    var slideshowEnabled by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var slideshowIntervalMs by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(5000L) }
+    var slideshowLoop by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+    var isMapInteractive by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+
+    // Autoplay Slideshow Engine
+    LaunchedEffect(slideshowEnabled, slideshowIntervalMs, slideshowLoop) {
+        if (slideshowEnabled) {
+            while (true) {
+                kotlinx.coroutines.delay(slideshowIntervalMs)
+                val nextPage = pagerState.currentPage + 1
+                if (nextPage < pagerState.pageCount) {
+                    pagerState.animateScrollToPage(nextPage)
+                } else if (slideshowLoop) {
+                    pagerState.animateScrollToPage(0)
+                } else {
+                    slideshowEnabled = false
+                    break
+                }
+            }
+        }
+    }
+
     if (isTabletopMode) {
         Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             // Top Half: Horizontal Photo Pager
@@ -198,24 +231,59 @@ fun PhotoDetailScreen(
             )
 
             // Bottom Half: Scrollable Metadata & Console Panel (always expanded)
-            Box(
+            val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+            Column(
                 modifier = Modifier
                     .weight(1.2f)
                     .fillMaxWidth()
                     .background(Color.Black)
-                    .verticalScroll(rememberScrollState())
             ) {
-                currentPhoto?.let { photo ->
-                    MetadataPanel(
-                        photo = photo,
-                        gearProfile = gearProfile,
-                        isGearLoading = isGearLoading,
-                        locationName = locationName,
-                        aiSummaryState = aiSummaryState,
-                        expanded = true, // permanently open in split layout for desk viewing
-                        onToggleExpand = {}, // expand toggle disabled in split tabletop view
-                        onGenerateAiSummary = onGenerateAiSummary
-                    )
+                // Interactive Autoplay Slideshow & Navigation Panel
+                SlideshowConsole(
+                    slideshowEnabled = slideshowEnabled,
+                    slideshowIntervalMs = slideshowIntervalMs,
+                    slideshowLoop = slideshowLoop,
+                    isMapInteractive = isMapInteractive,
+                    photoCount = photos.size,
+                    currentPage = pagerState.currentPage,
+                    onTogglePlay = { slideshowEnabled = !slideshowEnabled },
+                    onIntervalChange = { slideshowIntervalMs = it },
+                    onToggleLoop = { slideshowLoop = !slideshowLoop },
+                    onToggleMapLock = { isMapInteractive = !isMapInteractive },
+                    onNext = {
+                        val next = pagerState.currentPage + 1
+                        if (next < pagerState.pageCount) {
+                            coroutineScope.launch { pagerState.animateScrollToPage(next) }
+                        }
+                    },
+                    onPrev = {
+                        val prev = pagerState.currentPage - 1
+                        if (prev >= 0) {
+                            coroutineScope.launch { pagerState.animateScrollToPage(prev) }
+                        }
+                    }
+                )
+
+                // Scrollable EXIF Metadata Panel below console
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    currentPhoto?.let { photo ->
+                        MetadataPanel(
+                            photo = photo,
+                            gearProfile = gearProfile,
+                            isGearLoading = isGearLoading,
+                            locationName = locationName,
+                            aiSummaryState = aiSummaryState,
+                            expanded = true, // permanently open in split layout for desk viewing
+                            isMapInteractive = isMapInteractive, // dynamic map gesture lock
+                            onToggleExpand = {}, // expand toggle disabled in split tabletop view
+                            onGenerateAiSummary = onGenerateAiSummary
+                        )
+                    }
                 }
             }
         }
@@ -407,6 +475,7 @@ private fun MetadataPanel(
     locationName: String?,
     aiSummaryState: AiSummaryState,
     expanded: Boolean,
+    isMapInteractive: Boolean = false,
     onToggleExpand: () -> Unit,
     onGenerateAiSummary: () -> Unit
 ) {
@@ -457,6 +526,8 @@ private fun MetadataPanel(
 
             // Exposure row
             ExposureRow(photo)
+            Spacer(modifier = Modifier.height(8.dp))
+            MetadataActionBar(photo, context = LocalContext.current)
 
             // AI Overview (collapsible, generates on-demand)
             if (!photo.cameraModel.isNullOrBlank() || !photo.lensModel.isNullOrBlank()) {
@@ -470,7 +541,7 @@ private fun MetadataPanel(
             // Location
             if (photo.gpsLat != null && photo.gpsLng != null) {
                 Spacer(modifier = Modifier.height(12.dp))
-                LocationSection(photo.gpsLat, photo.gpsLng, locationName)
+                LocationSection(photo.gpsLat, photo.gpsLng, locationName, isMapInteractive)
             }
         }
     }
@@ -569,7 +640,7 @@ private fun ExposureRow(photo: PhotoMetadata) {
 // ─── Location Section ───────────────────────────────────────────────────────────
 
 @Composable
-private fun LocationSection(lat: Double, lng: Double, locationName: String?) {
+private fun LocationSection(lat: Double, lng: Double, locationName: String?, isMapInteractive: Boolean) {
     val locationText = if (locationName != null) {
         "📍 $locationName (${String.format("%.4f", lat)}, ${String.format("%.4f", lng)})"
     } else {
@@ -603,12 +674,12 @@ private fun LocationSection(lat: Double, lng: Double, locationName: String?) {
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             uiSettings = MapUiSettings(
-                zoomControlsEnabled = false,
-                mapToolbarEnabled = false,
-                scrollGesturesEnabled = false,
-                zoomGesturesEnabled = false,
-                tiltGesturesEnabled = false,
-                rotationGesturesEnabled = false
+                zoomControlsEnabled = isMapInteractive,
+                mapToolbarEnabled = isMapInteractive,
+                scrollGesturesEnabled = isMapInteractive,
+                zoomGesturesEnabled = isMapInteractive,
+                tiltGesturesEnabled = isMapInteractive,
+                rotationGesturesEnabled = isMapInteractive
             )
         ) {
             Marker(state = MarkerState(position = position))
@@ -759,4 +830,239 @@ private fun Context.findActivity(): Activity? {
         ctx = ctx.baseContext
     }
     return null
+}
+
+@Composable
+private fun SlideshowConsole(
+    slideshowEnabled: Boolean,
+    slideshowIntervalMs: Long,
+    slideshowLoop: Boolean,
+    isMapInteractive: Boolean,
+    photoCount: Int,
+    currentPage: Int,
+    onTogglePlay: () -> Unit,
+    onIntervalChange: (Long) -> Unit,
+    onToggleLoop: () -> Unit,
+    onToggleMapLock: () -> Unit,
+    onNext: () -> Unit,
+    onPrev: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Dashboard header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "💻 Tabletop Playback Dashboard",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${currentPage + 1} / $photoCount photos",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.LightGray.copy(alpha = 0.6f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Controls Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Previous button
+                IconButton(onClick = onPrev) {
+                    Icon(
+                        imageVector = Icons.Default.SkipPrevious,
+                        contentDescription = "Previous photo",
+                        tint = Color.White
+                    )
+                }
+
+                // Play / Pause button with premium highlight background
+                IconButton(
+                    onClick = onTogglePlay,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            color = if (slideshowEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                    else Color.White.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(24.dp)
+                        )
+                ) {
+                    Icon(
+                        imageVector = if (slideshowEnabled) Icons.Default.Pause
+                                      else Icons.Default.PlayArrow,
+                        contentDescription = if (slideshowEnabled) "Pause slideshow" else "Start slideshow",
+                        tint = if (slideshowEnabled) MaterialTheme.colorScheme.primary else Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                // Next button
+                IconButton(onClick = onNext) {
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = "Next photo",
+                        tint = Color.White
+                    )
+                }
+
+                // Loop toggle
+                IconButton(
+                    onClick = onToggleLoop,
+                    modifier = Modifier.background(
+                        color = if (slideshowLoop) MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                                else Color.Transparent,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Repeat,
+                        contentDescription = "Slideshow Loop",
+                        tint = if (slideshowLoop) MaterialTheme.colorScheme.secondary else Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Map lock toggle
+                IconButton(
+                    onClick = onToggleMapLock,
+                    modifier = Modifier.background(
+                        color = if (isMapInteractive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                else Color.Transparent,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = "Interactive Location Map",
+                        tint = if (isMapInteractive) MaterialTheme.colorScheme.primary else Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Speed interval selector row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Autoplay Delay:  ",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray
+                )
+                val intervals = listOf(2000L to "2s", 5000L to "5s", 10000L to "10s")
+                intervals.forEach { (duration, label) ->
+                    val isSelected = slideshowIntervalMs == duration
+                    Text(
+                        text = label,
+                        modifier = Modifier
+                            .padding(horizontal = 6.dp)
+                            .background(
+                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                        else Color.White.copy(alpha = 0.05f),
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .clickable { onIntervalChange(duration) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) Color.Black else Color.White,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetadataActionBar(photo: PhotoMetadata, context: Context) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Quick EXIF Copy Button
+        TextButton(
+            onClick = {
+                val exposureParts = mutableListOf<String>()
+                photo.cameraModel?.let { exposureParts.add("Camera: $it") }
+                photo.lensModel?.let { exposureParts.add("Lens: $it") }
+                photo.focalLength?.let { exposureParts.add("${it}mm") }
+                photo.aperture?.let { exposureParts.add("f/$it") }
+                photo.shutterSpeed?.let { exposureParts.add("${it}s") }
+                photo.iso?.let { exposureParts.add("ISO $it") }
+                
+                val clipboardText = exposureParts.joinToString("\n")
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("AeroChaser Photo EXIF", clipboardText)
+                clipboard.setPrimaryClip(clip)
+                
+                android.widget.Toast.makeText(context, "EXIF copied to clipboard!", android.widget.Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.padding(end = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ContentCopy,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "Copy EXIF",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        // Quick Share Button
+        TextButton(
+            onClick = {
+                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Aviation Photo Details")
+                    putExtra(
+                        android.content.Intent.EXTRA_TEXT,
+                        "AeroChaser Aviation Photo Metadata:\n" +
+                        "Camera: ${photo.cameraModel ?: "Unknown"}\n" +
+                        "Lens: ${photo.lensModel ?: "Unknown"}\n" +
+                        "Exposure: ${photo.focalLength ?: "?"}mm • f/${photo.aperture ?: "?"} • ${photo.shutterSpeed ?: "?"}s • ISO ${photo.iso ?: "?"}\n" +
+                        "File Uri: ${photo.localUri}"
+                    )
+                }
+                context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Photo Metadata"))
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Share,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.secondary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "Share Metadata",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary
+            )
+        }
+    }
 }

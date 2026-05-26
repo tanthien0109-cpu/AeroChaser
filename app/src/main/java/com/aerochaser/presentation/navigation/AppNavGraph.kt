@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -70,6 +74,7 @@ fun AppNavGraph() {
     val configuration = LocalConfiguration.current
     val isWideScreen = configuration.screenWidthDp >= 600
     var activePhotoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var splitRatio by rememberSaveable { mutableStateOf(0.4f) }
 
     val bottomNavItems = listOf(
         BottomNavItem("Timeline", Icons.Default.PhotoLibrary, Screen.Timeline.route),
@@ -101,7 +106,7 @@ fun AppNavGraph() {
             // Master Column (Timeline / Import / Cloud spanning left column)
             Box(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(splitRatio)
                     .fillMaxHeight()
             ) {
                 Scaffold(
@@ -151,18 +156,54 @@ fun AppNavGraph() {
                 }
             }
 
-            // High-fidelity Divider
-            Spacer(
+            // Interactive Draggable Divider (Google & Samsung Split Haptic Guideline)
+            var isDragging by remember { mutableStateOf(false) }
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
+                    .width(12.dp) // wider target for effortless touchscreen drag
+                    .background(Color.Transparent)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { isDragging = true },
+                            onDragEnd = { isDragging = false },
+                            onDragCancel = { isDragging = false },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val deltaRatio = dragAmount.x / (configuration.screenWidthDp * density.density)
+                                splitRatio = (splitRatio + deltaRatio).coerceIn(0.25f, 0.75f)
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                // Crease divider line
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(1.dp)
+                        .background(
+                            if (isDragging) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outlineVariant
+                        )
+                )
+                // Visual drag handle selector bar
+                Box(
+                    modifier = Modifier
+                        .size(width = 4.dp, height = 48.dp)
+                        .background(
+                            color = if (isDragging) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(2.dp)
+                        )
+                )
+            }
 
             // Detail Column (Right Pane)
             Box(
                 modifier = Modifier
-                    .weight(1.5f)
+                    .weight(1f - splitRatio)
                     .fillMaxHeight()
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
